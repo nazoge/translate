@@ -28,14 +28,13 @@ SYSTEM_PROMPT = """
 4. 翻訳結果のみを出力し、解説等の付加情報は一切含めないこと。
 """
 
-# --- 修正箇所: 同期関数に戻すが、多めに取得してエラーをキャッチ ---
 def fetch_images_sync(query):
     try:
-        # 新しい仕様では with 句を使わずに直接呼び出せます
         results = DDGS().images(query, max_results=15)
         if not results:
             return []
-        return [item["image"] for item in results if "image" in item]
+        
+        return [item.get("thumbnail") or item.get("image") for item in results]
     except Exception as e:
         print(f"Image Search Error: {e}")
         return []
@@ -52,11 +51,19 @@ class ImageView(discord.ui.View):
         embed = discord.Embed(title=f"検索結果: {self.query}")
         embed.set_image(url=self.images[self.index])
         embed.set_footer(text=f"{self.index + 1} / {len(self.images)}")
-        await interaction.response.edit_message(embed=embed, view=self)
+    
+        try:
+            await interaction.response.edit_message(embed=embed, view=self)
+        except discord.errors.NotFound:
+            try:
+                await interaction.message.edit(embed=embed, view=self)
+            except Exception as e:
+                print(f"Recovery edit failed: {e}")
 
     @discord.ui.button(label="前へ", style=discord.ButtonStyle.primary)
     async def prev_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
+            await interaction.response.send_message("他の人の検索結果は操作できません。", ephemeral=True)
             return
         self.index = (self.index - 1) % len(self.images)
         await self.update_message(interaction)
@@ -64,6 +71,7 @@ class ImageView(discord.ui.View):
     @discord.ui.button(label="次へ", style=discord.ButtonStyle.primary)
     async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
+            await interaction.response.send_message("他の人の検索結果は操作できません。", ephemeral=True)
             return
         self.index = (self.index + 1) % len(self.images)
         await self.update_message(interaction)
