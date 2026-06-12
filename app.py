@@ -1,9 +1,11 @@
 import os
 import discord
+import asyncio
 from discord import app_commands
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
+from duckduckgo_search import DDGS
 
 load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
@@ -25,6 +27,39 @@ SYSTEM_PROMPT = """
 3. 文脈を推測し、ゲーム用語やインターネットスラングは対象言語圏の自然な表現を採用すること。
 4. 翻訳結果のみを出力し、解説等の付加情報は一切含めないこと。
 """
+
+def fetch_images(query):
+    with DDGS() as ddgs:
+        results = ddgs.images(query, max_results=10)
+        return [item["image"] for item in results]
+
+class ImageView(discord.ui.View):
+    def __init__(self, query: str, images: list, user_id: int):
+        super().__init__(timeout=180)
+        self.query = query
+        self.images = images
+        self.user_id = user_id
+        self.index = 0
+
+    async def update_message(self, interaction: discord.Interaction):
+        embed = discord.Embed(title=f"検索結果: {self.query}")
+        embed.set_image(url=self.images[self.index])
+        embed.set_footer(text=f"{self.index + 1} / {len(self.images)}")
+        await interaction.response.edit_message(embed=embed, view=self)
+
+    @discord.ui.button(label="前へ", style=discord.ButtonStyle.primary)
+    async def prev_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return
+        self.index = (self.index - 1) % len(self.images)
+        await self.update_message(interaction)
+
+    @discord.ui.button(label="次へ", style=discord.ButtonStyle.primary)
+    async def next_button(self, interaction: discord.Interaction, button: discord.ui.Button):
+        if interaction.user.id != self.user_id:
+            return
+        self.index = (self.index + 1) % len(self.images)
+        await self.update_message(interaction)
 
 class TranslationApp(discord.Client):
     def __init__(self):
@@ -69,6 +104,29 @@ async def translate_message(interaction: discord.Interaction, message: discord.M
     except Exception as e:
         print(f"Error during translation: {e}")
         await interaction.followup.send("翻訳中にエラーが発生しました。しばらく経ってから再度お試しください。")
+
+@client.tree.command(name="image", description="画像を検索します")
+@app_commands.describe(query="検索するキーワード")
+async def image_search(interaction: discord.Interaction, query: str):
+    await interaction.response.defer()
+
+    loop = asyncio.get_event_loop()
+    try:
+        images = await loop.run_in_executor(None, fetch_images, query)
+    except Exception:
+        await interaction.followup.send("検索中にエラーが発生しました。")
+        return
+
+    if not images:
+        await interaction.followup.send("画像が見つかりませんでした。")
+        return
+
+    view = ImageView(query, images, interaction.user.id)
+    embed = discord.Embed(title=f"検索結果: {query}")
+    embed.set_image(url=images[0])
+    embed.set_footer(text=f"1 / {len(images)}")
+
+    await interaction.followup.send(embed=embed, view=view)
 
 @client.event
 async def on_ready():
