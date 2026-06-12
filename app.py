@@ -68,7 +68,7 @@ class TranslationApp(discord.Client):
 
     async def setup_hook(self):
         await self.tree.sync()
-        print("Application commands synced.")
+        print("Application commands synced globally.")
 
 client = TranslationApp()
 
@@ -106,6 +106,8 @@ async def translate_message(interaction: discord.Interaction, message: discord.M
         await interaction.followup.send("翻訳中にエラーが発生しました。しばらく経ってから再度お試しください。")
 
 @client.tree.command(name="image", description="画像を検索します")
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
 @app_commands.describe(query="検索するキーワード")
 async def image_search(interaction: discord.Interaction, query: str):
     await interaction.response.defer()
