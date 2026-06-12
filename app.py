@@ -33,7 +33,6 @@ def fetch_images_sync(query):
         results = DDGS().images(query, max_results=15)
         if not results:
             return []
-        
         return [item.get("thumbnail") or item.get("image") for item in results]
     except Exception as e:
         print(f"Image Search Error: {e}")
@@ -51,20 +50,25 @@ class ImageView(discord.ui.View):
         embed = discord.Embed(title=f"検索結果: {self.query}")
         embed.set_image(url=self.images[self.index])
         embed.set_footer(text=f"{self.index + 1} / {len(self.images)}")
-    
+        
         try:
-            await interaction.response.edit_message(embed=embed, view=self)
+            await interaction.edit_original_response(embed=embed, view=self)
         except discord.errors.NotFound:
-            try:
-                await interaction.message.edit(embed=embed, view=self)
-            except Exception as e:
-                print(f"Recovery edit failed: {e}")
+            pass
+        except Exception as e:
+            print(f"Edit failed: {e}")
 
     @discord.ui.button(label="前へ", style=discord.ButtonStyle.primary)
     async def prev_button(self, interaction: discord.Interaction, button: discord.ui.Button):
         if interaction.user.id != self.user_id:
             await interaction.response.send_message("他の人の検索結果は操作できません。", ephemeral=True)
             return
+        
+        try:
+            await interaction.response.defer()
+        except discord.errors.NotFound:
+            return
+
         self.index = (self.index - 1) % len(self.images)
         await self.update_message(interaction)
 
@@ -73,6 +77,12 @@ class ImageView(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.send_message("他の人の検索結果は操作できません。", ephemeral=True)
             return
+        
+        try:
+            await interaction.response.defer()
+        except discord.errors.NotFound:
+            return
+            
         self.index = (self.index + 1) % len(self.images)
         await self.update_message(interaction)
 
