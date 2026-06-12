@@ -63,7 +63,7 @@ async def translate_message(interaction: discord.Interaction, message: discord.M
             description=translated_text,
             color=discord.Color.blue()
         )
-        embed.set_footer(text="code by nazoge")
+        embed.set_footer(text="app by nazoge")
         await interaction.followup.send(embed=embed)
 
     except Exception as e:
