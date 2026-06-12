@@ -5,7 +5,7 @@ from discord import app_commands
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
-from ddgs import AsyncDDGS
+from ddgs import DDGS
 
 load_dotenv()
 DISCORD_TOKEN = os.getenv("DISCORD_TOKEN")
@@ -28,16 +28,16 @@ SYSTEM_PROMPT = """
 4. 翻訳結果のみを出力し、解説等の付加情報は一切含めないこと。
 """
 
-# 変更点: 非同期(async)関数に書き換え、取得枚数を15枚に増加
-async def fetch_images_async(query):
+# --- 修正箇所: 同期関数に戻すが、多めに取得してエラーをキャッチ ---
+def fetch_images_sync(query):
     try:
-        async with AsyncDDGS() as ddgs:
-            results = await ddgs.images(query, max_results=15)
-            if not results:
-                return []
-            return [item["image"] for item in results if "image" in item]
+        # 新しい仕様では with 句を使わずに直接呼び出せます
+        results = DDGS().images(query, max_results=15)
+        if not results:
+            return []
+        return [item["image"] for item in results if "image" in item]
     except Exception as e:
-        print(f"DuckDuckGo API Error: {e}")
+        print(f"Image Search Error: {e}")
         return []
 
 class ImageView(discord.ui.View):
@@ -119,7 +119,7 @@ async def translate_message(interaction: discord.Interaction, message: discord.M
 async def image_search(interaction: discord.Interaction, query: str):
     await interaction.response.defer()
 
-    images = await fetch_images_async(query)
+    images = await asyncio.to_thread(fetch_images_sync, query)
 
     if not images:
         await interaction.followup.send("画像が見つからなかったか、取得に失敗しました。時間をおいて再試行してください。")
