@@ -1,10 +1,12 @@
 import os
-import discord
 import asyncio
 import random
 import io
-from PIL import Image, ImageDraw
+from typing import List
+
+import discord
 from discord import app_commands
+from PIL import Image, ImageDraw
 from google import genai
 from google.genai import types
 from dotenv import load_dotenv
@@ -37,7 +39,29 @@ SYSTEM_PROMPT = """
 3. **出力形式の制限**: 翻訳された結果のテキストのみを直接出力すること。言語の判定結果、前置き、解説などの付加情報は一切含めないこと。
 """
 
-def fetch_images_sync(query):
+def parse_time_to_seconds(time_str: str) -> float:
+    time_str = time_str.strip()
+    parts = time_str.split(':')
+
+    try:
+        if len(parts) == 1:
+            return float(parts[0])
+        elif len(parts) == 2:
+            minutes = float(parts[0])
+            seconds = float(parts[1])
+            return minutes * 60 + seconds
+        elif len(parts) == 3:
+            hours = float(parts[0])
+            minutes = float(parts[1])
+            seconds = float(parts[2])
+            return hours * 3600 + minutes * 60 + seconds
+        else:
+            raise ValueError("無効な時間フォーマットです")
+    except ValueError:
+        raise ValueError("時間の値が数値ではありません")
+
+
+def fetch_images_sync(query: str) -> List[str]:
     try:
         results = DDGS().images(query, max_results=15)
         if not results:
@@ -48,6 +72,7 @@ def fetch_images_sync(query):
         return []
 
 class ImageView(discord.ui.View):
+
     def __init__(self, query: str, images: list, user_id: int):
         super().__init__(timeout=600)
         self.query = query
@@ -59,7 +84,7 @@ class ImageView(discord.ui.View):
         embed = discord.Embed(title=f"検索結果: {self.query}")
         embed.set_image(url=self.images[self.index])
         embed.set_footer(text=f"{self.index + 1} / {len(self.images)}")
-        
+
         try:
             await interaction.edit_original_response(embed=embed, view=self)
         except discord.errors.NotFound:
@@ -72,7 +97,7 @@ class ImageView(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.send_message("他の人の検索結果は操作できません。", ephemeral=True)
             return
-        
+
         try:
             await interaction.response.defer()
         except discord.errors.NotFound:
@@ -86,23 +111,25 @@ class ImageView(discord.ui.View):
         if interaction.user.id != self.user_id:
             await interaction.response.send_message("他の人の検索結果は操作できません。", ephemeral=True)
             return
-        
+
         try:
             await interaction.response.defer()
         except discord.errors.NotFound:
             return
-            
+
         self.index = (self.index + 1) % len(self.images)
         await self.update_message(interaction)
 
 class TranslationApp(discord.Client):
+
     def __init__(self):
         super().__init__(intents=discord.Intents.default())
         self.tree = app_commands.CommandTree(self)
 
     async def setup_hook(self):
         await self.tree.sync()
-        print("Application commands synced globally.")
+        print("✓ Application commands synced globally.")
+
 
 client = TranslationApp()
 
@@ -118,20 +145,17 @@ async def translate_message(interaction: discord.Interaction, message: discord.M
 
     try:
         response = gemini_client.models.generate_content(
-            model='gemini-3.1-flash-lite',
+            model="gemini-3.1-flash-lite",
             contents=message.content,
             config=types.GenerateContentConfig(
                 system_instruction=SYSTEM_PROMPT,
                 temperature=0.1,
-            )
+            ),
         )
 
         translated_text = response.text
 
-        embed = discord.Embed(
-            description=translated_text,
-            color=discord.Color.blue()
-        )
+        embed = discord.Embed(description=translated_text, color=discord.Color.blue())
         embed.set_footer(text="app by nazoge")
         await interaction.followup.send(embed=embed)
 
@@ -149,7 +173,9 @@ async def image_search(interaction: discord.Interaction, query: str):
     images = await asyncio.to_thread(fetch_images_sync, query)
 
     if not images:
-        await interaction.followup.send("画像が見つからなかったか、取得に失敗しました。時間をおいて再試行してください。")
+        await interaction.followup.send(
+            "画像が見つからなかったか、取得に失敗しました。時間をおいて再試行してください。"
+        )
         return
 
     view = ImageView(query, images, interaction.user.id)
@@ -158,6 +184,7 @@ async def image_search(interaction: discord.Interaction, query: str):
     embed.set_footer(text=f"1 / {len(images)}")
 
     await interaction.followup.send(embed=embed, view=view)
+
 
 @client.tree.command(name="palette", description="ランダムなカラーパレットを生成します")
 @app_commands.allowed_installs(guilds=True, users=True)
@@ -188,15 +215,66 @@ async def random_palette(interaction: discord.Interaction):
     file = discord.File(fp=buffer, filename="palette.png")
 
     description = "\n".join([f"**Color {i+1}:** `{hc}`" for i, hc in enumerate(hex_colors)])
-    embed = discord.Embed(title="カラーパレット", description=description, color=discord.Color.from_rgb(*colors[0]))
+    embed = discord.Embed(
+        title="カラーパレット", description=description, color=discord.Color.from_rgb(*colors[0])
+    )
     embed.set_image(url="attachment://palette.png")
 
     await interaction.followup.send(embed=embed, file=file)
 
+
+@client.tree.command(name="wcal", description="電子レンジなどのワット計算を行います")
+@app_commands.allowed_installs(guilds=True, users=True)
+@app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+@app_commands.describe(
+    original_watt="元のワット数（W）",
+    time="加熱時間（秒、または MM:SS 形式）",
+    target_watt="変換先のワット数（W）",
+)
+async def watt_calculator(interaction: discord.Interaction, original_watt: float, time: str, target_watt: float):
+    await interaction.response.defer()
+
+    try:
+        total_seconds = parse_time_to_seconds(time)
+
+        if total_seconds <= 0:
+            await interaction.followup.send("時間は0より大きい値を指定してください。")
+            return
+
+        if original_watt <= 0 or target_watt <= 0:
+            await interaction.followup.send("ワット数は0より大きい値を指定してください。")
+            return
+
+        energy = original_watt * total_seconds / 3600
+        converted_seconds = energy * 3600 / target_watt
+
+        minutes = int(converted_seconds // 60)
+        seconds = int(converted_seconds % 60)
+        remaining_ms = int((converted_seconds % 1) * 1000)
+
+        time_str = f"{minutes}:{seconds:02d}"
+        if remaining_ms > 0:
+            time_str += f".{remaining_ms}ms"
+
+        embed = discord.Embed(
+            title="ワット計算結果",
+            description=f"**元の設定:** {original_watt}W で {time}\n**変換結果:** {target_watt}W で **{time_str}** ({converted_seconds:.2f}秒)",
+            color=discord.Color.green(),
+        )
+        embed.set_footer(text="app by nazoge")
+
+        await interaction.followup.send(embed=embed)
+
+    except ValueError as e:
+        await interaction.followup.send(f"エラー: {str(e)}")
+    except Exception as e:
+        print(f"Error during watt calculation: {e}")
+        await interaction.followup.send("ワット計算中にエラーが発生しました。")
+
 @client.event
 async def on_ready():
-    print(f'Logged in as {client.user} (ID: {client.user.id})')
-    print('------')
+    print(f"✓ Logged in as {client.user} (ID: {client.user.id})")
+    print("------")
 
 if __name__ == "__main__":
     client.run(DISCORD_TOKEN)
