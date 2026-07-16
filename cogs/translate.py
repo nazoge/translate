@@ -38,11 +38,25 @@ SYSTEM_PROMPT = """
 class TranslateCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+
+        try:
+            allowed_contexts = app_commands.AppCommandContext(
+                guild=True,
+                dm_channel=True,
+                private_channel=True,
+            )
+        except TypeError:
+            allowed_contexts = app_commands.AppCommandContext(
+                guild=True,
+                dms=True,
+                private_channels=True,
+            )
+
         self.ctx_menu = app_commands.ContextMenu(
             name="翻訳する",
             callback=self.translate_message,
             allowed_installs=app_commands.AppInstallationType(guild=True, user=True),
-            allowed_contexts=app_commands.AppCommandContext(guild=True, dms=True, private_channels=True),
+            allowed_contexts=allowed_contexts,
         )
 
     async def cog_load(self):
