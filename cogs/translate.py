@@ -38,10 +38,19 @@ SYSTEM_PROMPT = """
 class TranslateCog(commands.Cog):
     def __init__(self, bot: commands.Bot):
         self.bot = bot
+        self.ctx_menu = app_commands.ContextMenu(
+            name="翻訳する",
+            callback=self.translate_message,
+            allowed_installs=app_commands.AppInstallationType(guild=True, user=True),
+            allowed_contexts=app_commands.AppCommandContext(guild=True, dms=True, private_channels=True),
+        )
 
-    @app_commands.context_menu(name="翻訳する")
-    @app_commands.allowed_installs(guilds=True, users=True)
-    @app_commands.allowed_contexts(guilds=True, dms=True, private_channels=True)
+    async def cog_load(self):
+        self.bot.tree.add_command(self.ctx_menu)
+
+    async def cog_unload(self):
+        self.bot.tree.remove_command(self.ctx_menu.name, type=self.ctx_menu.type)
+
     async def translate_message(self, interaction: discord.Interaction, message: discord.Message):
         await interaction.response.defer(ephemeral=False)
 
