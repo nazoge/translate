@@ -22,4 +22,4 @@ RUN useradd --system --create-home --home-dir /home/bot bot \
 
 USER bot
 
-CMD ["python", "app.py"]
+CMD ["python", "main.py"]
