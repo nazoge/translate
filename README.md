@@ -22,6 +22,7 @@ Discord 上でメッセージを右クリックして翻訳できる多機能ボ
 | `/janken <手>` | Bot とジャンケン | サーバー・ユーザー |
 
 - `/count` は `data/count_users.json` で許可されたユーザーのみ利用できます（サーバー・ユーザーインストール両方で共通）
+- Docker 利用時は `data/count_users.json` をイメージビルド前に編集してください。コンテナ内にビルド時にコピーされます
 - 時間指定は `秒` または `MM:SS`、`HH:MM:SS` 形式が利用できます
 
 ## 必要な環境
@@ -78,7 +79,7 @@ docker compose up --build
 - `cogs/janken.py` : ジャンケン機能
 - `utils/helpers.py` : 画像検索・時間パース・ボタン UI 共通処理
 - `data/counts.sqlite3` : カウントデータ（自動作成）
-- `data/count_users.json` : カウント機能を利用できるユーザー ID 一覧
+- `data/count_users.json` : カウント機能を利用できるユーザー ID 一覧（`data/count_users.json.example` をコピーして作成）
 
 ## カウント機能の権限設定
 
