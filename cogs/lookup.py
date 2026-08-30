@@ -35,29 +35,42 @@ class LookupCog(commands.Cog):
             if user.banner:
                 embed.set_image(url=user.banner.url)
 
+            def get_attr(obj, name, default=None):
+                return getattr(obj, name, default)
+
             fields = [
                 ("ユーザー名", user.name, True),
-                ("グローバル表示名", user.global_name or "未設定", True),
+                ("グローバル表示名", get_attr(user, "global_name") or "未設定", True),
                 ("表示名", user.display_name, True),
                 ("ユーザーID", f"`{user.id}`", False),
                 ("識別子", f"#{user.discriminator}" if user.discriminator and user.discriminator != "0" else "未設定", True),
                 ("Bot", "はい" if user.bot else "いいえ", True),
                 ("システムアカウント", "はい" if user.system else "いいえ", True),
-                ("公式認証済み", "はい" if user.verified else "不明 / いいえ", True),
-                ("MFA (2段階認証)", "有効" if user.mfa_enabled else "無効 / 不明", True),
             ]
 
-            nitro_text = {0: "なし", 1: "Nitro Classic", 2: "Nitro", 3: "Nitro Basic"}.get(user.premium_type, "不明")
-            fields.append(("Nitro", nitro_text, True))
+            verified = get_attr(user, "verified")
+            if verified is not None:
+                fields.append(("公式認証済み", "はい" if verified else "いいえ", True))
 
-            if user.public_flags:
-                flags = [name.replace("_", " ").title() for name, value in user.public_flags if value]
+            mfa_enabled = get_attr(user, "mfa_enabled")
+            if mfa_enabled is not None:
+                fields.append(("MFA (2段階認証)", "有効" if mfa_enabled else "無効", True))
+
+            premium_type = get_attr(user, "premium_type")
+            if premium_type is not None:
+                nitro_text = {0: "なし", 1: "Nitro Classic", 2: "Nitro", 3: "Nitro Basic"}.get(premium_type, "不明")
+                fields.append(("Nitro", nitro_text, True))
+
+            public_flags = get_attr(user, "public_flags")
+            if public_flags:
+                flags = [name.replace("_", " ").title() for name, value in public_flags if value]
                 fields.append(("公開バッジ", ", ".join(flags) or "なし", False))
 
+            accent_color = get_attr(user, "accent_color")
             fields.extend([
                 ("アバター", f"[リンク]({user.display_avatar.url})" if user.avatar else "デフォルト", True),
                 ("バナー", f"[リンク]({user.banner.url})" if user.banner else "未設定", True),
-                ("アクセントカラー", str(user.accent_color) if user.accent_color else "未設定", True),
+                ("アクセントカラー", str(accent_color) if accent_color else "未設定", True),
                 ("作成日時", discord.utils.format_dt(user.created_at, style="F"), False),
                 ("作成日時 (相対)", discord.utils.format_dt(user.created_at, style="R"), False),
             ])
