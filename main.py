@@ -23,6 +23,7 @@ class TranslationBot(commands.Bot):
         await self.load_extension("cogs.watt")
         await self.load_extension("cogs.count")
         await self.load_extension("cogs.janken")
+        await self.load_extension("cogs.lookup")
         await self.tree.sync()
         print("✓ Application commands synced globally.")
 
