@@ -18,46 +18,57 @@ class LookupCog(commands.Cog):
             await interaction.response.send_message("ユーザーIDは数字で指定してください。", ephemeral=True)
             return
 
+        await interaction.response.defer(ephemeral=False)
+
         try:
             user = await self.bot.fetch_user(uid)
         except discord.NotFound:
-            await interaction.response.send_message("指定したユーザーIDが見つかりません。", ephemeral=True)
+            await interaction.followup.send("指定したユーザーIDが見つかりません。", ephemeral=True)
             return
         except discord.HTTPException as exc:
-            await interaction.response.send_message(f"ユーザー情報の取得に失敗しました: {exc.text}", ephemeral=True)
+            await interaction.followup.send(f"ユーザー情報の取得に失敗しました: {exc.text}", ephemeral=True)
             return
 
-        embed = discord.Embed(title="ユーザー情報", color=discord.Color.blue())
-        embed.set_thumbnail(url=user.display_avatar.url)
-        if user.banner:
-            embed.set_image(url=user.banner.url)
+        try:
+            embed = discord.Embed(title="ユーザー情報", color=discord.Color.blue())
+            embed.set_thumbnail(url=user.display_avatar.url)
+            if user.banner:
+                embed.set_image(url=user.banner.url)
 
-        embed.add_field(name="ユーザー名", value=user.name, inline=True)
-        embed.add_field(name="グローバル表示名", value=user.global_name or "未設定", inline=True)
-        embed.add_field(name="表示名", value=user.display_name, inline=True)
-        embed.add_field(name="ユーザーID", value=f"`{user.id}`", inline=False)
-        embed.add_field(name="識別子", value=f"#{user.discriminator}" if user.discriminator and user.discriminator != "0" else "未設定", inline=True)
-        embed.add_field(name="Bot", value="はい" if user.bot else "いいえ", inline=True)
-        embed.add_field(name="システムアカウント", value="はい" if user.system else "いいえ", inline=True)
-        embed.add_field(name="公式認証済み", value="はい" if user.verified else "不明 / いいえ", inline=True)
-        embed.add_field(name="MFA (2段階認証)", value="有効" if user.mfa_enabled else "無効 / 不明", inline=True)
+            fields = [
+                ("ユーザー名", user.name, True),
+                ("グローバル表示名", user.global_name or "未設定", True),
+                ("表示名", user.display_name, True),
+                ("ユーザーID", f"`{user.id}`", False),
+                ("識別子", f"#{user.discriminator}" if user.discriminator and user.discriminator != "0" else "未設定", True),
+                ("Bot", "はい" if user.bot else "いいえ", True),
+                ("システムアカウント", "はい" if user.system else "いいえ", True),
+                ("公式認証済み", "はい" if user.verified else "不明 / いいえ", True),
+                ("MFA (2段階認証)", "有効" if user.mfa_enabled else "無効 / 不明", True),
+            ]
 
-        nitro_text = {0: "なし", 1: "Nitro Classic", 2: "Nitro", 3: "Nitro Basic"}.get(user.premium_type, "不明")
-        embed.add_field(name="Nitro", value=nitro_text, inline=True)
+            nitro_text = {0: "なし", 1: "Nitro Classic", 2: "Nitro", 3: "Nitro Basic"}.get(user.premium_type, "不明")
+            fields.append(("Nitro", nitro_text, True))
 
-        if user.public_flags:
-            flags = [name.replace("_", " ").title() for name, value in user.public_flags if value]
-            embed.add_field(name="公開バッジ", value=", ".join(flags) or "なし", inline=False)
+            if user.public_flags:
+                flags = [name.replace("_", " ").title() for name, value in user.public_flags if value]
+                fields.append(("公開バッジ", ", ".join(flags) or "なし", False))
 
-        embed.add_field(name="アバター", value=f"[リンク]({user.display_avatar.url})" if user.avatar else "デフォルト", inline=True)
-        embed.add_field(name="バナー", value=f"[リンク]({user.banner.url})" if user.banner else "未設定", inline=True)
-        embed.add_field(name="アクセントカラー", value=str(user.accent_color) if user.accent_color else "未設定", inline=True)
-        embed.add_field(name="作成日時", value=discord.utils.format_dt(user.created_at, style="F"), inline=False)
-        embed.add_field(name="作成日時 (相対)", value=discord.utils.format_dt(user.created_at, style="R"), inline=False)
+            fields.extend([
+                ("アバター", f"[リンク]({user.display_avatar.url})" if user.avatar else "デフォルト", True),
+                ("バナー", f"[リンク]({user.banner.url})" if user.banner else "未設定", True),
+                ("アクセントカラー", str(user.accent_color) if user.accent_color else "未設定", True),
+                ("作成日時", discord.utils.format_dt(user.created_at, style="F"), False),
+                ("作成日時 (相対)", discord.utils.format_dt(user.created_at, style="R"), False),
+            ])
 
-        embed.set_footer(text=f"リクエスト: {interaction.user}")
+            for name, value, inline in fields[:25]:
+                embed.add_field(name=name, value=value, inline=inline)
 
-        await interaction.response.send_message(embed=embed)
+            embed.set_footer(text=f"リクエスト: {interaction.user}")
+            await interaction.followup.send(embed=embed)
+        except Exception as exc:
+            await interaction.followup.send(f"Embed の生成中にエラーが発生しました: {exc}", ephemeral=True)
 
 
 async def setup(bot: commands.Bot):
