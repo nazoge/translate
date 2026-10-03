@@ -18,7 +18,6 @@ RUN python -m pip install --upgrade pip \
 COPY . .
 
 RUN mkdir -p /app/data \
-    && cp -n /app/data/count_users.json.example /app/data/count_users.json \
     && useradd --system --create-home --home-dir /home/bot bot \
     && chown -R bot:bot /app
 
