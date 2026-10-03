@@ -3,3 +3,5 @@ google-genai>=1.0.0
 python-dotenv>=1.0.0
 ddgs
 Pillow
+aiosqlite>=0.20.0
+pytz>=2024.1

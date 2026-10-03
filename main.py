@@ -22,6 +22,7 @@ class TranslationBot(commands.Bot):
         await self.load_extension("cogs.palette")
         await self.load_extension("cogs.watt")
         await self.load_extension("cogs.lookup")
+        await self.load_extension("cogs.reminder")
         await self.tree.sync()
         print("✓ Application commands synced globally.")
 
