@@ -50,7 +50,7 @@ class ConfirmClearView(discord.ui.View):
     ):
         if interaction.user.id != self.user_id:
             await interaction.response.send_message(
-                "他のユーザーの操作はできません。", ephemeral=True
+                "他のユーザーの操作はできません。", ephemeral=False
             )
             return
         await delete_reminders_by_user(self.user_id)
@@ -66,7 +66,7 @@ class ConfirmClearView(discord.ui.View):
     ):
         if interaction.user.id != self.user_id:
             await interaction.response.send_message(
-                "他のユーザーの操作はできません。", ephemeral=True
+                "他のユーザーの操作はできません。", ephemeral=False
             )
             return
         await interaction.response.edit_message(
@@ -175,7 +175,7 @@ class ReminderCog(commands.Cog):
         tts: Optional[bool] = False,
         timezone: Optional[str] = DEFAULT_TIMEZONE,
     ):
-        await interaction.response.defer(ephemeral=True)
+        await interaction.response.defer(ephemeral=False)
 
         try:
             remind_at = parse_time(time, timezone or DEFAULT_TIMEZONE)
@@ -253,7 +253,7 @@ class ReminderCog(commands.Cog):
 
     @app_commands.command(name="reminders", description="自分のリマインダー一覧を表示します")
     async def reminders(self, interaction: discord.Interaction):
-        await interaction.response.defer(ephemeral=True)
+        await interaction.response.defer(ephemeral=False)
         rows = await get_reminders_by_user(interaction.user.id)
         if not rows:
             await interaction.followup.send("📋 リマインダーはありません")
@@ -275,7 +275,7 @@ class ReminderCog(commands.Cog):
     @remind_group.command(name="cancel", description="リマインダーを削除します")
     @app_commands.describe(id="削除するリマインダーのID")
     async def remind_cancel(self, interaction: discord.Interaction, id: int):
-        await interaction.response.defer(ephemeral=True)
+        await interaction.response.defer(ephemeral=False)
         reminder = await get_reminder_by_id(id)
         if reminder is None:
             await interaction.followup.send("❌ リマインダーが存在しません")
@@ -303,7 +303,7 @@ class ReminderCog(commands.Cog):
         time: str,
         timezone: Optional[str] = DEFAULT_TIMEZONE,
     ):
-        await interaction.response.defer(ephemeral=True)
+        await interaction.response.defer(ephemeral=False)
         reminder = await get_reminder_by_id(id)
         if reminder is None:
             await interaction.followup.send("❌ リマインダーが存在しません")
@@ -330,7 +330,7 @@ class ReminderCog(commands.Cog):
     async def remind_clear(self, interaction: discord.Interaction):
         view = ConfirmClearView(interaction.user.id)
         await interaction.response.send_message(
-            "本当にすべて削除しますか？", view=view, ephemeral=True
+            "本当にすべて削除しますか？", view=view, ephemeral=False
         )
 
 
