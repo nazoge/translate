@@ -1,11 +1,14 @@
+import os
+
 import aiosqlite
 from datetime import datetime, timezone
 from typing import Optional
 
-DB_PATH = "database/reminders.db"
+DB_PATH = os.environ.get("REMINDER_DB_PATH", "data/reminders.db")
 
 
 async def init_db():
+    os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
     async with aiosqlite.connect(DB_PATH) as db:
         await db.execute("""
             CREATE TABLE IF NOT EXISTS reminders (
