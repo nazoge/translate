@@ -88,26 +88,68 @@ class TranslateCog(commands.Cog):
         try:
             print(
                 f"[Translate] Request: "
-                f"{message.author} -> {message.content[:100]}"
+                f"{message.author} -> {message.content[:100]}",
+                flush=True
             )
 
-            response = await asyncio.wait_for(
-                gemini_client.aio.models.generate_content(
-                    model="gemini-3.7-flash",
-                    contents=message.content,
-                    config=types.GenerateContentConfig(
-                        system_instruction=SYSTEM_PROMPT,
-                        temperature=0.1,
+            try:
+                print(
+                    "[Translate] Trying gemini-3.7-flash...",
+                    flush=True
+                )
+
+                response = await asyncio.wait_for(
+                    gemini_client.aio.models.generate_content(
+                        model="gemini-3.7-flash",
+                        contents=message.content,
+                        config=types.GenerateContentConfig(
+                            system_instruction=SYSTEM_PROMPT,
+                            temperature=0.1,
+                        ),
                     ),
-                ),
-                timeout=30
-            )
+                    timeout=30
+                )
+
+                print(
+                    "[Translate] gemini-3.7-flash succeeded",
+                    flush=True
+                )
+
+            except Exception as e:
+                print(
+                    f"[Translate] 3.7 Flash failed: "
+                    f"{type(e).__name__}: {e}",
+                    flush=True
+                )
+
+                print(
+                    "[Translate] Trying gemini-3.6-flash...",
+                    flush=True
+                )
+
+                response = await asyncio.wait_for(
+                    gemini_client.aio.models.generate_content(
+                        model="gemini-3.6-flash",
+                        contents=message.content,
+                        config=types.GenerateContentConfig(
+                            system_instruction=SYSTEM_PROMPT,
+                            temperature=0.1,
+                        ),
+                    ),
+                    timeout=30
+                )
+
+                print(
+                    "[Translate] gemini-3.6-flash succeeded",
+                    flush=True
+                )
 
             translated_text = response.text
 
             print(
                 f"[Translate] Response: "
-                f"{translated_text[:100]}"
+                f"{translated_text[:100]}",
+                flush=True
             )
 
             if not translated_text:
@@ -126,7 +168,10 @@ class TranslateCog(commands.Cog):
 
         except asyncio.TimeoutError:
 
-            print("[Translate] API timeout")
+            print(
+                "[Translate] API timeout",
+                flush=True
+            )
 
             await interaction.followup.send(
                 "APIの応答がタイムアウトしました。"
@@ -136,13 +181,14 @@ class TranslateCog(commands.Cog):
 
             print(
                 f"[Translate] Error: "
-                f"{type(e).__name__}: {e}"
+                f"{type(e).__name__}: {e}",
+                flush=True
             )
 
             await interaction.followup.send(
                 "翻訳中にエラーが発生しました。"
+                "しばらくしてから再度お試しください。"
             )
-
 
 async def setup(bot: commands.Bot):
     await bot.add_cog(TranslateCog(bot))
