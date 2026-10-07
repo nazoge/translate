@@ -36,6 +36,7 @@ SYSTEM_PROMPT = """
 
 
 class TranslateCog(commands.Cog):
+
     def __init__(self, bot: commands.Bot):
         self.bot = bot
 
@@ -55,7 +56,10 @@ class TranslateCog(commands.Cog):
         self.ctx_menu = app_commands.ContextMenu(
             name="翻訳する",
             callback=self.translate_message,
-            allowed_installs=app_commands.AppInstallationType(guild=True, user=True),
+            allowed_installs=app_commands.AppInstallationType(
+                guild=True,
+                user=True
+            ),
             allowed_contexts=allowed_contexts,
         )
 
@@ -63,34 +67,81 @@ class TranslateCog(commands.Cog):
         self.bot.tree.add_command(self.ctx_menu)
 
     async def cog_unload(self):
-        self.bot.tree.remove_command(self.ctx_menu.name, type=self.ctx_menu.type)
+        self.bot.tree.remove_command(
+            self.ctx_menu.name,
+            type=self.ctx_menu.type
+        )
 
-    async def translate_message(self, interaction: discord.Interaction, message: discord.Message):
+    async def translate_message(
+        self,
+        interaction: discord.Interaction,
+        message: discord.Message
+    ):
         await interaction.response.defer(ephemeral=False)
 
         if not message.content:
-            await interaction.followup.send("翻訳するテキストがありません。")
+            await interaction.followup.send(
+                "翻訳するテキストがありません。"
+            )
             return
 
         try:
-            response = gemini_client.models.generate_content(
-                model="gemini-3.7-flash",
-                contents=message.content,
-                config=types.GenerateContentConfig(
-                    system_instruction=SYSTEM_PROMPT,
-                    temperature=0.1,
+            print(
+                f"[Translate] Request: "
+                f"{message.author} -> {message.content[:100]}"
+            )
+
+            response = await asyncio.wait_for(
+                gemini_client.aio.models.generate_content(
+                    model="gemini-3.7-flash",
+                    contents=message.content,
+                    config=types.GenerateContentConfig(
+                        system_instruction=SYSTEM_PROMPT,
+                        temperature=0.1,
+                    ),
                 ),
+                timeout=30
             )
 
             translated_text = response.text
 
-            embed = discord.Embed(description=translated_text, color=discord.Color.blue())
+            print(
+                f"[Translate] Response: "
+                f"{translated_text[:100]}"
+            )
+
+            if not translated_text:
+                translated_text = "翻訳結果を取得できませんでした。"
+
+            embed = discord.Embed(
+                description=translated_text,
+                color=discord.Color.blue()
+            )
+
             embed.set_footer(text="app by nazoge")
-            await interaction.followup.send(embed=embed)
+
+            await interaction.followup.send(
+                embed=embed
+            )
+
+        except asyncio.TimeoutError:
+
+            print("[Translate] API timeout")
+
+            await interaction.followup.send(
+                "APIの応答がタイムアウトしました。"
+            )
 
         except Exception as e:
-            print(f"Error during translation: {e}")
-            await interaction.followup.send("翻訳中にエラーが発生しました。しばらく経ってから再度お試しください。")
+
+            print(
+                f"[Translate] Error: "
+                f"{type(e).__name__}: {e}"
+            )
+
+            await interaction.followup.send(
+                "翻訳中にエラーが発生しました。"
+            )
 
 
 async def setup(bot: commands.Bot):
