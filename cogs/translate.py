@@ -95,13 +95,13 @@ class TranslateCog(commands.Cog):
 
             try:
                 print(
-                    "[Translate] Trying gemini-3.7-flash...",
+                    "[Translate] Trying gemini-3.5-flash-lite...",
                     flush=True
                 )
 
                 response = await asyncio.wait_for(
                     gemini_client.aio.models.generate_content(
-                        model="gemini-3.7-flash",
+                        model="gemini-3.5-flash-lite",
                         contents=message.content,
                         config=types.GenerateContentConfig(
                             system_instruction=SYSTEM_PROMPT,
@@ -112,25 +112,25 @@ class TranslateCog(commands.Cog):
                 )
 
                 print(
-                    "[Translate] gemini-3.7-flash succeeded",
+                    "[Translate] gemini-3.5-flash-lite succeeded",
                     flush=True
                 )
 
             except Exception as e:
                 print(
-                    f"[Translate] 3.7 Flash failed: "
+                    f"[Translate] 3.5 Flash failed: "
                     f"{type(e).__name__}: {e}",
                     flush=True
                 )
 
                 print(
-                    "[Translate] Trying gemini-3.6-flash...",
+                    "[Translate] Trying gemini-3.1-flash-lite...",
                     flush=True
                 )
 
                 response = await asyncio.wait_for(
                     gemini_client.aio.models.generate_content(
-                        model="gemini-3.6-flash",
+                        model="gemini-3.1-flash-lite",
                         contents=message.content,
                         config=types.GenerateContentConfig(
                             system_instruction=SYSTEM_PROMPT,
@@ -141,7 +141,7 @@ class TranslateCog(commands.Cog):
                 )
 
                 print(
-                    "[Translate] gemini-3.6-flash succeeded",
+                    "[Translate] gemini-3.1-flash-lite succeeded",
                     flush=True
                 )
 
