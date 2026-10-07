@@ -74,7 +74,7 @@ class TranslateCog(commands.Cog):
 
         try:
             response = gemini_client.models.generate_content(
-                model="gemini-3.1-flash-lite",
+                model="gemini-3.7-flash",
                 contents=message.content,
                 config=types.GenerateContentConfig(
                     system_instruction=SYSTEM_PROMPT,

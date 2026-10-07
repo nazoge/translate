@@ -28,14 +28,17 @@ from utils.time_parser import (
 
 DEFAULT_TIMEZONE = "Asia/Tokyo"
 
-TIMEZONE_CHOICES = [
-    app_commands.Choice(name="Asia/Tokyo", value="Asia/Tokyo"),
-    app_commands.Choice(name="UTC", value="UTC"),
-    app_commands.Choice(name="America/New_York", value="America/New_York"),
-    app_commands.Choice(name="Europe/London", value="Europe/London"),
-    app_commands.Choice(name="Asia/Seoul", value="Asia/Seoul"),
-    app_commands.Choice(name="Asia/Shanghai", value="Asia/Shanghai"),
-]
+
+async def timezone_autocomplete(
+    interaction: discord.Interaction, current: str
+) -> list[app_commands.Choice[str]]:
+    current_lower = current.lower()
+    matches = [
+        tz
+        for tz in pytz.all_timezones
+        if current_lower in tz.lower()
+    ][:25]
+    return [app_commands.Choice(name=tz, value=tz) for tz in matches]
 
 
 class ConfirmClearView(discord.ui.View):
@@ -163,7 +166,7 @@ class ReminderCog(commands.Cog):
         tts="TTSで読み上げるかどうか",
         timezone="日時指定のタイムゾーン",
     )
-    @app_commands.choices(timezone=TIMEZONE_CHOICES)
+    @app_commands.autocomplete(timezone=timezone_autocomplete)
     async def remind_set(
         self,
         interaction: discord.Interaction,
@@ -295,7 +298,7 @@ class ReminderCog(commands.Cog):
         time="新しいリマインド時刻",
         timezone="日時指定のタイムゾーン",
     )
-    @app_commands.choices(timezone=TIMEZONE_CHOICES)
+    @app_commands.autocomplete(timezone=timezone_autocomplete)
     async def remind_edit(
         self,
         interaction: discord.Interaction,
