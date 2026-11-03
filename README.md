@@ -75,23 +75,7 @@ docker compose up --build
 - `cogs/image.py` : 画像検索機能
 - `cogs/palette.py` : カラーパレット生成機能
 - `cogs/watt.py` : ワット計算機能
-- `cogs/count.py` : SQLite カウント機能
-- `cogs/janken.py` : ジャンケン機能
 - `utils/helpers.py` : 画像検索・時間パース・ボタン UI 共通処理
-- `data/counts.sqlite3` : カウントデータ（自動作成）
-- `data/count_users.json` : カウント機能を利用できるユーザー ID 一覧（`data/count_users.json.example` をコピーして作成）
-
-## カウント機能の権限設定
-
-`/count` コマンドを利用できるユーザーを `data/count_users.json` に文字列で指定してください。
-
-```json
-{
-  "allowed_user_ids": [
-    "123456789012345678"
-  ]
-}
-```
 
 ## 備考
 
